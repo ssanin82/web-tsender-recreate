@@ -7,11 +7,10 @@ export const metadata: Metadata = {
   title: "TSender"
 };
 
-export default function RootLayout(props: { children: ReactNode}) {
+export default function RootLayout(props: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        hey from layout
         <Providers>
           {props.children}
         </Providers>
