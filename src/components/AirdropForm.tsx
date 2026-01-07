@@ -1,10 +1,11 @@
 "use client";
 
 import InputField from "@/components/ui/InputField";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { chainsToTSender, tsenderAbi, erc20Abi } from "@/constants";
 import { useChainId, useConfig, useAccount } from "wagmi";
 import { readContract } from "@wagmi/core";
+import { calculateTotal } from "@/utils";
 
 export default function ExportForm() {
     const [tokenAddress, setTokenAddress] = useState("");
@@ -13,6 +14,7 @@ export default function ExportForm() {
     const chainId = useChainId();
     const config = useConfig();
     const account = useAccount();
+    const total: number = useMemo(() => calculateTotal(amounts), [amounts]);
 
     async function getApprovedAmount(tSenderAddress: string | null): Promise<number> {
         if (!tSenderAddress) {
