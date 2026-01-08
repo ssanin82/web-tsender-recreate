@@ -1,35 +1,70 @@
 "use client";
 
 import InputField from "@/components/ui/InputField";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { chainsToTSender, tsenderAbi, erc20Abi } from "@/constants";
 import { useChainId, useConfig, useConnection, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import { calculateTotal } from "@/utils";
 
 export default function ExportForm() {
-    const [tokenAddress, setTokenAddress] = useState("");
-    const [recipients, setRecipients] = useState("");
-    const [amounts, setAmounts] = useState("");
+    const [tokenAddress, setTokenAddress] = useState<string>(() =>
+        typeof window !== "undefined" ? localStorage.getItem("tokenAddress") ?? "" : ""
+    );
+    const [recipients, setRecipients] = useState<string>(() =>
+        typeof window !== "undefined" ? localStorage.getItem("recipients") ?? "" : ""
+    );
+    const [amounts, setAmounts] = useState<string>(() =>
+        typeof window !== "undefined" ? localStorage.getItem("amounts") ?? "" : ""
+    );
     const chainId = useChainId();
     const config = useConfig();
     const { address } = useConnection();
     const total: number = useMemo(() => calculateTotal(amounts), [amounts]);
     const { data: hash, isPending, mutateAsync } = useWriteContract();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+     useEffect((): void => {
+        const savedToken = localStorage.getItem("tokenAddress");
+        const savedRecipients = localStorage.getItem("recipients");
+        const savedAmounts = localStorage.getItem("amounts");
+
+        if (savedToken !== null) setTokenAddress(savedToken);
+        if (savedRecipients !== null) setRecipients(savedRecipients);
+        if (savedAmounts !== null) setAmounts(savedAmounts);
+    }, []);
+
+    useEffect((): void => {
+        localStorage.setItem("tokenAddress", tokenAddress);
+    }, [tokenAddress]);
+
+    useEffect((): void => {
+        localStorage.setItem("recipients", recipients);
+    }, [recipients]);
+
+    useEffect((): void => {
+        localStorage.setItem("amounts", amounts);
+    }, [amounts]);
+    
     async function getApprovedAmount(tSenderAddress: string | null): Promise<number> {
         if (!tSenderAddress) {
             alert("No address found, please use a supported chain");
             return 0;
         }
-        const response = await readContract(config, {
-            abi: erc20Abi,
-            address: tokenAddress as `0x${string}`,
-            functionName: "allowance",
-            args: [ address, tSenderAddress as `0x${string}`]
-        });
-        return response as number;
+        try {
+            setErrorMessage(null);
+            const response = await readContract(config, {
+                abi: erc20Abi,
+                address: tokenAddress as `0x${string}`,
+                functionName: "allowance",
+                args: [ address, tSenderAddress as `0x${string}`]
+            });
+            return response as number;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Something went wrong";
+            setErrorMessage(message);
+        }
     }
 
     async function airdrop(tSenderAddress: string): Promise<void> {
@@ -125,6 +160,34 @@ export default function ExportForm() {
                 {isSubmitting ? "Processing…" : "Send Tokens"}
                 </button>
             </div>
+
+            {errorMessage && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                <div className="
+                w-full max-w-sm rounded-xl p-6 shadow-2xl
+                bg-zinc-900 text-zinc-100
+                border border-zinc-800
+                ">
+                <h2 className="mb-2 text-lg font-semibold text-red-400">
+                    Transaction Failed
+                </h2>
+                <p className="mb-4 text-sm text-zinc-300">
+                    {errorMessage}
+                </p>
+                <button
+                    onClick={() => setErrorMessage(null)}
+                    className="
+                    w-full rounded-lg bg-red-600 px-4 py-2
+                    text-sm font-semibold text-white
+                    transition hover:bg-red-700
+                    focus:outline-none focus:ring-2 focus:ring-red-500
+                    "
+                >
+                    Close
+                </button>
+                </div>
+            </div>
+            )}
         </div>
     );
 };
