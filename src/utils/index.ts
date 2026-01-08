@@ -1,2 +1,2 @@
-import { calculateTotal } from "@/utils/calculateTotal/calculateTotal";
+export { calculateTotal } from "@/utils/calculateTotal/calculateTotal";
 
