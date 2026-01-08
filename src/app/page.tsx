@@ -1,22 +1,29 @@
 "use client";
 
-import Header from "@/components/Header";
+import { useConnection } from "wagmi";
 import HomeContent from "@/components/HomeContent";
-import { useAccount } from "wagmi";
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  const { isConnected } = useAccount();
-  return (
-    <div>
-      {!isConnected ? (
+    const { address } = useConnection();
+    const [mounted, setMounted] = useState(false);
+
+    // ensure client-only rendering
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null; // nothing rendered on server
+
+    return (
         <div>
-          Please connect a wallet...
+            {!address ? (
+                <div>Please connect a wallet...</div>
+            ) : (
+                <div>
+                  <HomeContent />
+                </div>
+            )}
         </div>
-      ) : (
-        <div>
-          <HomeContent />
-        </div>
-      )}
-    </div>
-  );
+    );
 }

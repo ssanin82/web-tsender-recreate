@@ -17,6 +17,7 @@ export default function ExportForm() {
     const [amounts, setAmounts] = useState<string>(() =>
         typeof window !== "undefined" ? localStorage.getItem("amounts") ?? "" : ""
     );
+    const [tokenName, setTokenName] = useState("")
     const chainId = useChainId();
     const config = useConfig();
     const { address } = useConnection();
@@ -46,6 +47,28 @@ export default function ExportForm() {
     useEffect((): void => {
         localStorage.setItem("amounts", amounts);
     }, [amounts]);
+
+    // Fetch token name when address changes
+    useEffect(() => {
+        if (!tokenAddress) {
+            setTokenName("");
+            return;
+        }
+        const fetchName = async () => {
+            try {
+                const name = await readContract(config, {
+                    abi: erc20Abi,
+                    address: tokenAddress as `0x${string}`,
+                    functionName: "name",
+                    args: [],
+                });
+                setTokenName(name as string);
+            } catch {
+                setTokenName("");
+            }
+        };
+        fetchName();
+    }, [tokenAddress, config]);
     
     async function getApprovedAmount(tSenderAddress: string | null): Promise<number> {
         if (!tSenderAddress) {
@@ -88,15 +111,21 @@ export default function ExportForm() {
             const tSenderAddress = chainsToTSender[chainId]["tsender"];
             const approvedAmount = await getApprovedAmount(tSenderAddress);
             if (approvedAmount < total) {
-                const approvalHash = await mutateAsync({
-                    abi: erc20Abi,
-                    address: tokenAddress as `0x${string}`,
-                    functionName: "approve",
-                    args: [tSenderAddress as `0x${string}`, BigInt(total)]
-                });
-                const approvalReceipt = await waitForTransactionReceipt(config, {
-                    hash: approvalHash
-                });
+                try {
+                    const approvalHash = await mutateAsync({
+                        abi: erc20Abi,
+                        address: tokenAddress as `0x${string}`,
+                        functionName: "approve",
+                        args: [tSenderAddress as `0x${string}`, BigInt(total)]
+                    });
+                    const approvalReceipt = await waitForTransactionReceipt(config, {
+                        hash: approvalHash
+                    });
+                } catch (err) {
+                    const message = err instanceof Error ? err.message : "Something went wrong";
+                    setErrorMessage(message);
+                    return;
+                }
                 if (approvalReceipt && approvalReceipt.status === "success") {
                     console.log("Approval confirmed:", approvalReceipt);
                     await airdrop(tSenderAddress);
@@ -162,29 +191,50 @@ export default function ExportForm() {
             </div>
 
             {errorMessage && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-                <div className="
-                w-full max-w-sm rounded-xl p-6 shadow-2xl
-                bg-zinc-900 text-zinc-100
-                border border-zinc-800
-                ">
-                <h2 className="mb-2 text-lg font-semibold text-red-400">
-                    Transaction Failed
-                </h2>
-                <p className="mb-4 text-sm text-zinc-300">
-                    {errorMessage}
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="
+                    w-full max-w-sm rounded-xl p-6 shadow-2xl
+                    bg-zinc-900 text-zinc-100
+                    border border-zinc-800
+                    ">
+                    <h2 className="mb-2 text-lg font-semibold text-red-400">
+                        Transaction Failed
+                    </h2>
+                    <p className="mb-4 text-sm text-zinc-300">
+                        {errorMessage}
+                    </p>
+                    <button
+                        onClick={() => setErrorMessage(null)}
+                        className="
+                        w-full rounded-lg bg-red-600 px-4 py-2
+                        text-sm font-semibold text-white
+                        transition hover:bg-red-700
+                        focus:outline-none focus:ring-2 focus:ring-red-500
+                        "
+                    >
+                        Close
+                    </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Token details box */}
+            {tokenAddress && (
+            <div className="mt-4 rounded-xl border border-zinc-700 bg-gradient-to-br from-zinc-900 to-zinc-800 p-5 text-zinc-100 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 border-b border-zinc-700 pb-2">Token Details</h3>
+                <div className="space-y-2">
+                <p className="flex justify-between">
+                    <span className="font-medium text-zinc-300">Name:</span>
+                    <span className="text-zinc-100">{tokenName || "Unknown"}</span>
                 </p>
-                <button
-                    onClick={() => setErrorMessage(null)}
-                    className="
-                    w-full rounded-lg bg-red-600 px-4 py-2
-                    text-sm font-semibold text-white
-                    transition hover:bg-red-700
-                    focus:outline-none focus:ring-2 focus:ring-red-500
-                    "
-                >
-                    Close
-                </button>
+                <p className="flex justify-between">
+                    <span className="font-medium text-zinc-300">Amount (wei):</span>
+                    <span className="text-zinc-100">{total.toString()}</span>
+                </p>
+                <p className="flex justify-between">
+                    <span className="font-medium text-zinc-300">Amount (tokens):</span>
+                    <span className="text-zinc-100">{(total / 1e18).toFixed(4)}</span>
+                </p>
                 </div>
             </div>
             )}
