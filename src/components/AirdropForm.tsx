@@ -16,6 +16,7 @@ export default function ExportForm() {
     const { address } = useConnection();
     const total: number = useMemo(() => calculateTotal(amounts), [amounts]);
     const { data: hash, isPending, mutateAsync } = useWriteContract();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function getApprovedAmount(tSenderAddress: string | null): Promise<number> {
         if (!tSenderAddress) {
@@ -47,27 +48,32 @@ export default function ExportForm() {
     }
 
     async function handleSubmit() {
-        const tSenderAddress = chainsToTSender[chainId]["tsender"];
-        const approvedAmount = await getApprovedAmount(tSenderAddress);
-        if (approvedAmount < total) {
-            const approvalHash = await mutateAsync({
-                abi: erc20Abi,
-                address: tokenAddress as `0x${string}`,
-                functionName: "approve",
-                args: [tSenderAddress as `0x${string}`, BigInt(total)]
-            });
-            const approvalReceipt = await waitForTransactionReceipt(config, {
-                hash: approvalHash
-            });
-            if (approvalReceipt && approvalReceipt.status === "success") {
-                console.log("Approval confirmed:", approvalReceipt);
-                await airdrop(tSenderAddress);
+        try {
+            setIsSubmitting(true);
+            const tSenderAddress = chainsToTSender[chainId]["tsender"];
+            const approvedAmount = await getApprovedAmount(tSenderAddress);
+            if (approvedAmount < total) {
+                const approvalHash = await mutateAsync({
+                    abi: erc20Abi,
+                    address: tokenAddress as `0x${string}`,
+                    functionName: "approve",
+                    args: [tSenderAddress as `0x${string}`, BigInt(total)]
+                });
+                const approvalReceipt = await waitForTransactionReceipt(config, {
+                    hash: approvalHash
+                });
+                if (approvalReceipt && approvalReceipt.status === "success") {
+                    console.log("Approval confirmed:", approvalReceipt);
+                    await airdrop(tSenderAddress);
+                } else {
+                    console.log("Approval failed or not confirmed:", approvalReceipt);
+                    return;
+                }
             } else {
-                console.log("Approval failed or not confirmed:", approvalReceipt);
-                return;
+                await airdrop(tSenderAddress);
             }
-        } else {
-            await airdrop(tSenderAddress);
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
@@ -81,14 +87,14 @@ export default function ExportForm() {
             />
 
             <InputField
-                label="Recipients"
+                label="Recipients (comma or new line separated)"
                 placeholder="0x1234,0x5678,0x9012"
                 value={recipients}
                 onChange={(e) => setRecipients(e.target.value)}
             />
 
             <InputField
-                label="Amounts"
+                label="Amounts (wei; comma or new line separated)"
                 placeholder="100,200,300..."
                 value={amounts}
                 onChange={(e) => setAmounts(e.target.value)}
@@ -98,9 +104,10 @@ export default function ExportForm() {
             <div className="pt-4">
                 <button
                 onClick={handleSubmit}
+                disabled={isSubmitting}
                 className="
                     w-full
-                    inline-flex items-center justify-center
+                    inline-flex items-center justify-center gap-2
                     rounded-lg
                     bg-blue-600 px-6 py-3
                     text-sm font-semibold text-white
@@ -112,7 +119,10 @@ export default function ExportForm() {
                     disabled:cursor-not-allowed disabled:opacity-50
                 "
                 >
-                Send Tokens
+                {isSubmitting && (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                )}
+                {isSubmitting ? "Processing…" : "Send Tokens"}
                 </button>
             </div>
         </div>
