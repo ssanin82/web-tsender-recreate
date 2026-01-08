@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   images: {
     domains: ["cdn.jsdelivr.net"], // allow images from jsdelivr
-  }
+  },
+  output: "export",
+  distDir: "build"
 };
 
 module.exports = {
