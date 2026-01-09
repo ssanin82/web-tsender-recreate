@@ -142,7 +142,7 @@ export default function ExportForm() {
     }
 
     return(
-        <div className="mx-auto flex max-w-md flex-col gap-4">
+        <div className="mx-auto flex max-w-2xl flex-col gap-4">
             <InputField
                 label="Token Address"
                 placeholder="0x"
@@ -238,6 +238,28 @@ export default function ExportForm() {
                 </div>
             </div>
             )}
+
+            {/* Documentation Panel */}
+            {tokenAddress && (
+            <div className="mt-4 rounded-xl border border-emerald-800 bg-gradient-to-br from-emerald-900 to-yellow-900 p-5 text-amber-200 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4 border-b border-emerald-700 pb-2">Documentation</h3>
+                <div className="space-y-2 text-sm">
+                    <p>
+                        This will airdrop a given token by its address to given wallet(s). Example of a token with required airdrop functionality can be found here: 
+                        <a 
+                            href="https://github.com/ssanin82/solidity-erc20-airdrop-sepolia-test" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="underline text-amber-300"
+                        >
+                            solidity-erc20-airdrop-sepolia-test
+                        </a>. 
+                        This page is made for demo purposes only. It was tested on the Sepolia blockchain. It supports only the Metamask wallet. Wagmi supports many more chains, and various types of wallets could have been used, but this is a proof-of-concept page only.
+                    </p>
+
+                </div>
+            </div>
+        )}
         </div>
     );
 };

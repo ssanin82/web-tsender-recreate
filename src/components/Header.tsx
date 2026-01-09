@@ -8,7 +8,7 @@ const Header: FC = () => {
   return (
     <header style={headerStyle}>
       {/* Left side: Title */}
-      <h1 style={titleStyle}>TSender</h1>
+      <h1 style={titleStyle}>Token Sender: Wallet Intraction Demo Page</h1>
 
       {/* Center: GitHub and LinkedIn buttons */}
       <div style={linksContainerStyle}>
