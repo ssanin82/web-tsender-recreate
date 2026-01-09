@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Token Sender: Wallet Intraction Demo Page"
+  title: "Token Sender: Wallet Interaction Demo Page"
 };
 
 export default function RootLayout(props: { children: ReactNode }) {
